@@ -71,11 +71,16 @@ export function IncomeOutcomeChart({ data, loading }: IncomeOutcomeChartProps) {
       </CardHeader>
       <CardContent>
         {!hasData ? (
-          <div className="flex h-[280px] items-center justify-center text-muted-foreground text-sm">
+          <div
+            role="status"
+            aria-live="polite"
+            className="flex h-[280px] items-center justify-center text-muted-foreground text-sm"
+          >
             No data available to display
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height={280}>
+          <div role="img" aria-label="Line chart comparing monthly income and outcome values">
+            <ResponsiveContainer width="100%" height={280}>
             <LineChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" strokeOpacity={0.6} />
               <XAxis
@@ -116,7 +121,8 @@ export function IncomeOutcomeChart({ data, loading }: IncomeOutcomeChartProps) {
                 activeDot={{ r: 5, strokeWidth: 0 }}
               />
             </LineChart>
-          </ResponsiveContainer>
+            </ResponsiveContainer>
+          </div>
         )}
       </CardContent>
     </Card>
