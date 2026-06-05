@@ -1,4 +1,5 @@
 import {
+  type ActiveClientsDataPoint,
   type FinancialMovement,
   type KPIMetrics,
   type MonthlyDataPoint,
@@ -64,6 +65,34 @@ export function computeMonthlyData(
         profitPercent,
       };
     });
+}
+
+export function computeEstimatedActiveClients(
+  movements: FinancialMovement[],
+): ActiveClientsDataPoint[] {
+  const monthlyBuckets: Record<string, Set<string>> = {};
+
+  for (const movement of movements) {
+    if (movement.operation_type !== "income") {
+      continue;
+    }
+
+    const yearMonthKey = toYearMonthKey(new Date(movement.create_date));
+    if (!monthlyBuckets[yearMonthKey]) {
+      monthlyBuckets[yearMonthKey] = new Set<string>();
+    }
+
+    // Proxy determinista mientras no exista client_id en backend.
+    const estimatedClientKey = `${movement.business_type}-${movement.category}-${movement.create_date}`;
+    monthlyBuckets[yearMonthKey].add(estimatedClientKey);
+  }
+
+  return Object.keys(monthlyBuckets)
+    .sort()
+    .map((yearMonthKey) => ({
+      month: formatMonthYearLabel(yearMonthKey),
+      activeClients: monthlyBuckets[yearMonthKey].size,
+    }));
 }
 
 export function formatCurrency(value: number): string {

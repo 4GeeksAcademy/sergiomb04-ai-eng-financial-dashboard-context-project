@@ -187,3 +187,48 @@ def test_metrics_alerts_returns_anomaly_candidates():
             "baseline_average",
             "increase_ratio",
         }
+
+
+def test_active_clients_endpoint_returns_period_and_counts():
+    response = client.get(
+        "/api/metrics/clients/active",
+        params={"group_by": "month"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload
+    assert all(set(item.keys()) == {"period", "active_clients"} for item in payload)
+    assert all(item["active_clients"] >= 0 for item in payload)
+    assert payload == sorted(payload, key=lambda item: item["period"])
+
+
+def test_active_clients_endpoint_matches_unique_income_clients_for_day():
+    b2b_response = client.get("/api/metrics/b2b")
+
+    assert b2b_response.status_code == 200
+    b2b_payload = b2b_response.json()
+    first_income = next(item for item in b2b_payload if item["operation_type"] == "income")
+    target_date = first_income["create_date"]
+
+    expected_clients = {
+        item["client_id"]
+        for item in b2b_payload
+        if item["create_date"] == target_date and item["operation_type"] == "income"
+    }
+
+    response = client.get(
+        "/api/metrics/clients/active",
+        params={
+            "group_by": "day",
+            "business_type": "B2B",
+            "start_date": target_date,
+            "end_date": target_date,
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload) == 1
+    assert payload[0]["period"] == target_date
+    assert payload[0]["active_clients"] == len(expected_clients)

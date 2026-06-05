@@ -4,11 +4,16 @@ import { KPIRow } from "@/components/dashboard/kpi-row";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  type ActiveClientsDataPoint,
   type FinancialMovement,
   type KPIMetrics,
   type MonthlyDataPoint,
 } from "@/lib/financial-types";
-import { computeKPIs, computeMonthlyData } from "@/lib/financial-utils";
+import {
+  computeEstimatedActiveClients,
+  computeKPIs,
+  computeMonthlyData,
+} from "@/lib/financial-utils";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 const IncomeOutcomeChart = lazy(async () => {
@@ -18,6 +23,10 @@ const IncomeOutcomeChart = lazy(async () => {
 const ProfitPercentChart = lazy(async () => {
   const module = await import("@/components/dashboard/profit-percent-chart");
   return { default: module.ProfitPercentChart };
+});
+const ActiveClientsChart = lazy(async () => {
+  const module = await import("@/components/dashboard/active-clients-chart");
+  return { default: module.ActiveClientsChart };
 });
 
 async function fetchFinancialData(
@@ -51,6 +60,9 @@ function ChartLoadingCard() {
 function App() {
   const [metrics, setMetrics] = useState<KPIMetrics | null>(null);
   const [monthlyData, setMonthlyData] = useState<MonthlyDataPoint[]>([]);
+  const [activeClientsData, setActiveClientsData] = useState<
+    ActiveClientsDataPoint[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,6 +73,7 @@ function App() {
       .then((movements) => {
         setMetrics(computeKPIs(movements));
         setMonthlyData(computeMonthlyData(movements));
+        setActiveClientsData(computeEstimatedActiveClients(movements));
       })
       .catch((error: unknown) => {
         if (isAbortError(error)) {
@@ -104,13 +117,19 @@ function App() {
 
           <section
             aria-label="Financial charts"
-            className="grid grid-cols-1 gap-4 xl:grid-cols-2"
+            className="grid grid-cols-1 gap-4 xl:grid-cols-3"
           >
             <Suspense fallback={<ChartLoadingCard />}>
               <IncomeOutcomeChart data={monthlyData} loading={loading} />
             </Suspense>
             <Suspense fallback={<ChartLoadingCard />}>
               <ProfitPercentChart data={monthlyData} loading={loading} />
+            </Suspense>
+            <Suspense fallback={<ChartLoadingCard />}>
+              <ActiveClientsChart
+                data={activeClientsData}
+                loading={loading}
+              />
             </Suspense>
           </section>
         </div>

@@ -23,3 +23,8 @@ export interface MonthlyDataPoint {
   outcome: number
   profitPercent: number
 }
+
+export interface ActiveClientsDataPoint {
+  month: string
+  activeClients: number
+}

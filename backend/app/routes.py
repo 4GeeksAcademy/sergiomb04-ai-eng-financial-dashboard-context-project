@@ -25,6 +25,7 @@ class FinancialMovement(BaseModel):
     operation_type: OperationType
     category: Category
     business_type: BusinessType
+    client_id: str
 
 
 class MetricsFacets(BaseModel):
@@ -62,6 +63,11 @@ class MetricsAlert(BaseModel):
     increase_ratio: float
 
 
+class ActiveClientsSummaryItem(BaseModel):
+    period: str
+    active_clients: int
+
+
 def _year_for_month(month: int, today: date) -> int:
     if month < today.month:
         return today.year
@@ -74,6 +80,8 @@ def _build_movement(month: int, income_probability: float, today: date) -> Finan
     movement_day = random.randint(1, 28)
     movement_date = date(_year_for_month(month, today), month, movement_day)
     business_type: BusinessType = "B2B" if random.random() < 0.55 else "B2C"
+    client_pool_size = 60 if business_type == "B2B" else 120
+    client_id = f"{business_type}-{random.randint(1, client_pool_size):03d}"
 
     if operation_type == "income":
         category: Category = "sales" if random.random() < 0.9 else "others"
@@ -88,6 +96,7 @@ def _build_movement(month: int, income_probability: float, today: date) -> Finan
         operation_type=operation_type,
         category=category,
         business_type=business_type,
+        client_id=client_id,
     )
 
 
@@ -184,6 +193,35 @@ def summarize_movements(
             net=round(values["income"] - values["outcome"], 2),
         )
         for period, values in sorted(summary_map.items(), key=lambda item: item[0])
+    ]
+
+
+def summarize_active_clients(
+    movements: list[FinancialMovement],
+    group_by: GroupBy,
+) -> list[ActiveClientsSummaryItem]:
+    active_clients_map: dict[str, set[str]] = defaultdict(set)
+
+    for movement in movements:
+        if movement.operation_type != "income":
+            continue
+
+        if group_by == "day":
+            key = movement.create_date.isoformat()
+        elif group_by == "week":
+            iso_year, iso_week, _ = movement.create_date.isocalendar()
+            key = f"{iso_year}-W{iso_week:02d}"
+        else:
+            key = movement.create_date.strftime("%Y-%m")
+
+        active_clients_map[key].add(movement.client_id)
+
+    return [
+        ActiveClientsSummaryItem(
+            period=period,
+            active_clients=len(client_ids),
+        )
+        for period, client_ids in sorted(active_clients_map.items(), key=lambda item: item[0])
     ]
 
 
@@ -357,6 +395,24 @@ def get_metrics_alerts(
     )
     summary = summarize_movements(filtered, group_by)
     return detect_outcome_alerts(summary, threshold)
+
+
+@router.get("/api/metrics/clients/active", response_model=list[ActiveClientsSummaryItem])
+def get_active_clients(
+    group_by: GroupBy = Query(default="month"),
+    start_date: date | None = Query(default=None),
+    end_date: date | None = Query(default=None),
+    business_type: BusinessType | None = Query(default=None),
+) -> list[ActiveClientsSummaryItem]:
+    movements = generate_mock_movements(seed=42)
+    if business_type is not None:
+        movements = [
+            item for item in movements if item.business_type == business_type]
+
+    filtered = filter_movements(
+        movements, start_date, end_date, category=None, operation_type=None
+    )
+    return summarize_active_clients(filtered, group_by)
 
 
 @router.get("/api/metrics/b2b", response_model=list[FinancialMovement])

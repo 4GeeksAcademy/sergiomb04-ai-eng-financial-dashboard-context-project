@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  computeEstimatedActiveClients,
   computeKPIs,
   computeMonthlyData,
   formatCurrency,
@@ -100,6 +101,69 @@ describe("computeMonthlyData", () => {
       outcome: 0,
       profitPercent: 100,
     });
+  });
+});
+
+describe("computeEstimatedActiveClients", () => {
+  it("returns chronological monthly points with unique estimated clients", () => {
+    const movements: FinancialMovement[] = [
+      {
+        create_date: "2025-12-01",
+        amount: 1000,
+        operation_type: "income",
+        category: "sales",
+        business_type: "B2B",
+      },
+      {
+        create_date: "2025-12-01",
+        amount: 1200,
+        operation_type: "income",
+        category: "sales",
+        business_type: "B2B",
+      },
+      {
+        create_date: "2025-12-03",
+        amount: 900,
+        operation_type: "income",
+        category: "sales",
+        business_type: "B2C",
+      },
+      {
+        create_date: "2026-01-02",
+        amount: 300,
+        operation_type: "income",
+        category: "others",
+        business_type: "B2C",
+      },
+      {
+        create_date: "2026-01-04",
+        amount: 100,
+        operation_type: "outcome",
+        category: "operational",
+        business_type: "B2B",
+      },
+    ];
+
+    const result = computeEstimatedActiveClients(movements);
+
+    expect(result).toEqual([
+      { month: "Dec 2025", activeClients: 2 },
+      { month: "Jan 2026", activeClients: 1 },
+    ]);
+  });
+
+  it("returns empty array when there are no income movements", () => {
+    const onlyOutcomes: FinancialMovement[] = [
+      {
+        create_date: "2026-01-04",
+        amount: 100,
+        operation_type: "outcome",
+        category: "operational",
+        business_type: "B2B",
+      },
+    ];
+
+    expect(computeEstimatedActiveClients(onlyOutcomes)).toEqual([]);
   });
 });
 
