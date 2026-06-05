@@ -130,6 +130,26 @@
 ### Backend
 - Runs through Docker with debugpy + uvicorn in reload mode.
 
+## Agent Skills (Copilot)
+
+### Repository-local skills
+- accessibility
+- financial-dashboard-playbook
+- vercel-react-best-practices
+- vite
+
+### Workspace/global skills available
+- find-skills
+- project-setup-info-local
+- get-search-view-results
+- agent-customization
+- summarize-github-issue-pr-notification
+- suggest-fix-issue
+- form-github-search-query
+- show-github-search-result
+- address-pr-comments
+- create-pull-request
+
 ## Current stack status
 - Modern, coherent stack for an MVP-style financial dashboard.
 - Ready for local containerized development.
